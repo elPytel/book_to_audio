@@ -1,0 +1,13 @@
+{
+    "languages": {
+        "Hugingface-Honza": {
+            "name": "Honza",
+            "source": "https://huggingface.co/Thomcles/Piper-TTS-Czech",
+            "language": "Czech",
+            "model": {
+                "cs_CZ-honza-medium.onnx": "https://huggingface.co/Thomcles/Piper-TTS-Czech/resolve/main/medium/model.onnx",
+                "cs_CZ-honza-medium.onnx.json": "https://huggingface.co/Thomcles/Piper-TTS-Czech/resolve/main/medium/model.onnx.json"
+            }
+        }
+    }
+}

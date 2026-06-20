@@ -13,7 +13,7 @@ BOOKS_DIR = books
 EPUB_FILES := $(wildcard $(BOOKS_DIR)/*.epub)
 TXT_FILES := $(patsubst %.epub,%.txt,$(EPUB_FILES))
 
-BOOK ?= rur
+BOOK ?= $(firstword $(notdir $(basename $(TXT_FILES))))
 INPUT_TXT := $(BOOKS_DIR)/$(BOOK).txt
 OUTPUT_AUDIO := $(GENERATE_AUDIO_DIR)/$(BOOK).wav
 
@@ -39,19 +39,31 @@ $(VOICES_DIR):
 $(BOOKS_DIR):
 	@mkdir -p $(BOOKS_DIR)
 
+help:
+	@printf "$(YELLOW)Usage: make [target] BOOK=\"book_name\"$(RESET)\n"
+	@printf "$(YELLOW)Targets:$(RESET)\n"
+	@printf "  $(BLUE)install$(RESET) - Install dependencies from pip-dependencies.txt and apt-dependencies.txt\n"
+	@printf "  $(BLUE)download-voices$(RESET) - Download required voice models\n"
+	@printf "  $(BLUE)convert-books$(RESET) - Convert all EPUB books in $(BOOKS_DIR) to TXT format\n"
+	@printf "  $(BLUE)read$(RESET) - Generate audiobook for the specified BOOK (without extension)\n"
+	@printf "  $(BLUE)clean$(RESET) - Remove generated audio files and installation marker\n"
+
 install: $(DEPS_LISTS)
 	@printf "$(YELLOW)Installing dependencies from $(BLUE)$^$(RESET)...\n"
 	@./install.sh
 	@touch $@
 
 # The download target depends on the actual physical files
-download-voices: $(VOICE_FILES)
+download-voices: $(VOICE_FILES) download-voices-huggingface
 
 # Pattern rule to download missing voice models
 $(VOICES_DIR)/%.onnx: | $(VOICES_DIR)
 	@printf "$(YELLOW)Downloading voice model $(BLUE)$*$(RESET)...\n"
-	@mkdir -p $(VOICES_DIR)
 	@python3 -m piper.download_voices "$*" --data-dir $(VOICES_DIR)
+
+download-voices-huggingface: | $(VOICES_DIR)
+	@printf "$(YELLOW)Downloading Hugging Face voice models...$(RESET)\n"
+	@bash ./download_custom_voices.sh --data-dir $(VOICES_DIR)
 
 # Target to convert all found EPUB books to TXT
 convert-books: $(TXT_FILES)

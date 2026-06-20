@@ -21,3 +21,7 @@ AI si samo nastaví parametry jednotlivých hlasů, aby odpovídali pohlaví a v
 Udržuje si záznam o tom kdo mluví. Využívá také nastavení emocí pro jednotlivé dialogy.  
 
 Rozchození na divadelních hrách.
+
+## Další jazyky
+
+[hugingface: Honza](https://huggingface.co/Thomcles/Piper-TTS-Czech)
