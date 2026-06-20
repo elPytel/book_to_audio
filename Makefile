@@ -23,6 +23,13 @@ INPUT_TXT := $(GENERATE_DIR)/$(BOOK).txt
 INPUT_XML := $(GENERATE_DIR)/$(BOOK).xml
 OUTPUT_AUDIO := $(GENERATE_DIR)/$(BOOK).wav
 
+FRAGMENTS_DIR := $(GENERATE_DIR)/$(BOOK)/fragments
+
+TXT_FRAGMENTS := $(shell find $(FRAGMENTS_DIR) -name '*.txt' 2>/dev/null)
+WAV_FRAGMENTS := $(TXT_FRAGMENTS:.txt=.wav)
+
+MERGED_DIR := $(GENERATE_DIR)/$(BOOK)/audio
+
 # Define dependencies for installation
 DEPS_LISTS := $(wildcard pip-dependencies.txt apt-dependencies.txt)
 
@@ -34,7 +41,7 @@ BLUE   := $(shell printf '\033[0;34m')
 BOLD   := $(shell printf '\033[1m')
 RESET  := $(shell printf '\033[0m')
 
-.PHONY: all clean
+.PHONY: all clean stats split synthesize read list-speakers
 
 all: read 
 
@@ -54,6 +61,9 @@ help:
 	@printf "  $(BLUE)download-voices$(RESET) - Download required voice models\n"
 	@printf "  $(BLUE)convert-books$(RESET) - Convert all EPUB books in $(BOOKS_DIR) to TXT format\n"
 	@printf "  $(BLUE)read$(RESET) - Generate audiobook for the specified BOOK (without extension)\n"
+	@printf "  $(BLUE)validate-xml$(RESET) - Validate the generated XML against the schema\n"
+	@printf "  $(BLUE)list-speakers$(RESET) - List unique speakers found in the XML\n"
+	@printf "  $(BLUE)stats$(RESET) - Print acts and scenes count for the specified BOOK\n"
 	@printf "  $(BLUE)clean$(RESET) - Remove generated audio files and installation marker\n"
 
 install: $(DEPS_LISTS)
@@ -92,8 +102,6 @@ validate-xml: $(INPUT_XML) $(SCHEMA_FILE)
 	@xmllint --noout --schema $(SCHEMA_FILE) $(INPUT_XML)
 	@printf "$(GREEN)Validation passed! XML is perfectly structured.$(RESET)\n"
 
-.PHONY: list-speakers
-
 # Vypíše abecední seznam všech unikátních postav v XML souboru
 list-speakers: $(INPUT_XML)
 	@printf "$(YELLOW)Unique speakers found in $(BLUE)$(INPUT_XML)$(YELLOW):$(RESET)\n"
@@ -104,11 +112,50 @@ list-speakers: $(INPUT_XML)
 		uniq | \
 		sed 's/^/  - /'
 
-# Read target now depends on the pre-converted TXT file
-read: install download-voices $(INPUT_TXT) | $(BOOKS_DIR) $(GENERATE_DIR)
-	@printf "$(YELLOW)Synthesizing book: $(BLUE)$(BOOK)$(RESET)...\n"
-	@cat "$(INPUT_TXT)" | python3 -m piper -m $(VOICE) --data-dir $(VOICES_DIR) -f $(OUTPUT_AUDIO)
-	@printf "$(GREEN)Audiobook generated successfully: $(BLUE)$(OUTPUT_AUDIO)$(RESET)\n"
+# Target to print acts and scenes count
+stats: $(INPUT_XML)
+	@printf "$(YELLOW)Struktura dila $(BLUE)$(BOOK)$(YELLOW):$(RESET)\n"
+	@ACT_COUNT=$$(xmllint --xpath "count(//act)" $< 2>/dev/null); \
+	if [ "$$ACT_COUNT" -gt 0 ]; then \
+		for i in $$(seq 1 $$ACT_COUNT); do \
+			ACT_NAME=$$(xmllint --xpath "string(//act[$$i]/@name)" $< 2>/dev/null); \
+			SCENE_COUNT=$$(xmllint --xpath "count(//act[$$i]/scene)" $< 2>/dev/null); \
+			printf "  - %s: %s scen\n" "$$ACT_NAME" "$$SCENE_COUNT"; \
+		done; \
+	else \
+		SCENE_COUNT=$$(xmllint --xpath "count(//scene)" $< 2>/dev/null); \
+		if [ "$$SCENE_COUNT" -gt 0 ]; then \
+			printf "  - Dilo se nedeli na dejstvi. Celkovy pocet scen: %s\n" "$$SCENE_COUNT"; \
+		else \
+			printf "  - Dilo neobsahuje dejstvi ani sceny (pouze prime promluvy).\n"; \
+		fi; \
+	fi
+
+# Cíl pro vytvoření fragmentů textu
+split: validate-xml
+	@printf "$(YELLOW)Splitting XML into fragments in $(BLUE)$(FRAGMENTS_DIR)$(RESET)...\n"
+	@./$(TOOLS_DIR)/split_xml.sh "$(INPUT_XML)" "$(FRAGMENTS_DIR)"
+
+# Vzorové pravidlo pro převod jednoho TXT na WAV
+# Běží zcela bez smyčky. Make ho aplikuje na každý soubor automaticky.
+%.wav: %.txt
+	@printf "$(YELLOW)Synthesizing fragment $(BLUE)$<$(YELLOW) to $(BLUE)$@$(RESET)...\n"
+	@cat "$<" | python3 -m piper -m $(VOICES) --data-dir $(VOICES_DIR) -f "$@" 2>/dev/null
+
+# Sub-cíl, který vyžaduje hotové WAV soubory
+synthesize: $(WAV_FRAGMENTS)
+	@printf "$(GREEN)All fragments synthesized successfully.$(RESET)\n"
+
+merge: synthesize
+	@printf "$(YELLOW)Merging fragments into acts...$(RESET)\n"
+	@./$(TOOLS_DIR)/merge_acts.sh "$(FRAGMENTS_DIR)" "$(MERGED_DIR)"
+	@printf "$(GREEN)Merge complete. Final audio files are in $(BLUE)$(MERGED_DIR)$(GREEN).$(RESET)\n"
+
+# Hlavní cíl, který voláš z terminálu
+# Nejprve provede split, a následně zavolá sám sebe pro syntézu
+read: install download-voices split
+	@$(MAKE) synthesize BOOK=$(BOOK)
+	@$(MAKE) merge BOOK=$(BOOK)
 
 clean:
 	@printf "$(YELLOW)Cleaning up...$(RESET)\n"

@@ -12,6 +12,14 @@ make
 
 Automaticky se nainstalují závislosti a spustí se nástoroj převod knihy do audio formátu.
 
+### Paralelní zpracování
+
+Pro rychlejší zpracování je možné využít paralelní zpracování, pokud máte více jádrový procesor. Stačí spustit příkaz s parametrem `-j` a počet paralelních procesů. Například:
+```bash
+make read BOOK=Hamlet -j 12
+```
+
+### Přehrání audia
 Přehrání výsledného souboru:
 
 ```bash
