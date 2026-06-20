@@ -1,6 +1,7 @@
-
 GENERATE_AUDIO_DIR = generated
 VOICES_DIR = voices
+
+# Define available voices and select the first one as default
 VOICES := cs_CZ-jirka-medium
 VOICE := $(firstword $(VOICES))
 
@@ -17,8 +18,10 @@ BOOK ?= $(firstword $(notdir $(basename $(TXT_FILES))))
 INPUT_TXT := $(BOOKS_DIR)/$(BOOK).txt
 OUTPUT_AUDIO := $(GENERATE_AUDIO_DIR)/$(BOOK).wav
 
+# Define dependencies for installation
 DEPS_LISTS := $(wildcard pip-dependencies.txt apt-dependencies.txt)
 
+# Color codes for terminal output
 RED	   := $(shell printf '\033[0;31m')
 GREEN  := $(shell printf '\033[0;32m')
 YELLOW := $(shell printf '\033[0;33m')
