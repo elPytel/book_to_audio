@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+    <xs:complexType name="UtteranceType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="speaker" type="xs:string" use="required"/>
+                <xs:attribute name="action" type="xs:string" use="optional"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="SceneType">
+        <xs:sequence>
+            <xs:element name="utterance" type="UtteranceType" maxOccurs="unbounded" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="ActType">
+        <xs:choice maxOccurs="unbounded">
+            <xs:element name="scene" type="SceneType"/>
+            <xs:element name="utterance" type="UtteranceType"/>
+        </xs:choice>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:element name="book">
+        <xs:complexType>
+            <xs:choice maxOccurs="unbounded">
+                <xs:element name="act" type="ActType"/>
+                <xs:element name="scene" type="SceneType"/>
+                <xs:element name="utterance" type="UtteranceType"/>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

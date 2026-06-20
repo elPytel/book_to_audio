@@ -1,4 +1,5 @@
 python3-pip
 pylint
+libxml2-utils
 pandoc
 ffmpeg

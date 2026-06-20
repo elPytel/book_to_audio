@@ -35,6 +35,10 @@ Rozchození na divadelních hrách:
 2. Rozdělení do kapitol a jednotlivých dialogů,
 3. Generování audio souborů pro jednotlivé dialogy a kapitoly.
 
+## Návrh Pipeline
+
+`EPUB` -> TXT -> XML -> WAV fragmenty -> Spojená Audiokniha
+
 ## Další jazyky
 
 - [hugingface: Honza](https://huggingface.co/Thomcles/Piper-TTS-Czech)
