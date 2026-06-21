@@ -41,6 +41,16 @@ BLUE   := $(shell printf '\033[0;34m')
 BOLD   := $(shell printf '\033[1m')
 RESET  := $(shell printf '\033[0m')
 
+# Volba vychoziho engine (lze zmenit pri volani: make read ENGINE=piper)
+ENGINE ?= edge
+
+# Nastaveni spravneho vychoziho hlasu podle zvoleneho nastroje
+ifeq ($(ENGINE),piper)
+    DEFAULT_VOICE_MODEL = cs_CZ-jirka-medium
+else
+    DEFAULT_VOICE_MODEL = cs-CZ-AntoninNeural
+endif
+
 .PHONY: all clean stats split synthesize read list-speakers
 
 all: read 
@@ -153,20 +163,9 @@ split: validate-xml stats list-speakers generate-voices-map
 
 # Vzorové pravidlo pro převod jednoho TXT na WAV s podporou modulace hlasu
 %.wav: %.txt
-	@SPEAKER=$$(basename "$<" .txt | cut -d'_' -f2-); \
-	CONFIG=$$(grep "^$$SPEAKER=" $(VOICE_MAP) 2>/dev/null | cut -d'=' -f2); \
-	VOICE_MODEL=$$(echo "$$CONFIG" | cut -d'|' -f1); \
-	PITCH_SHIFT=$$(echo "$$CONFIG" | cut -d'|' -f2); \
-	if [ -z "$$VOICE_MODEL" ]; then VOICE_MODEL="$(VOICE)"; fi; \
-	if [ -z "$$PITCH_SHIFT" ]; then PITCH_SHIFT="0"; fi; \
-	printf "$(YELLOW)Synthesizing $(BLUE)$$SPEAKER$(YELLOW) using $(GREEN)$$VOICE_MODEL$(YELLOW) (Pitch: $$PITCH_SHIFT) -> $(BLUE)$@$(RESET)\n"; \
-	cat "$<" | python3 -m piper -m "$$VOICE_MODEL" --data-dir $(VOICES_DIR) -f "$@.tmp.wav" 2>/dev/null; \
-	if [ "$$PITCH_SHIFT" != "0" ]; then \
-		sox "$@.tmp.wav" "$@" pitch "$$PITCH_SHIFT"; \
-		rm -f "$@.tmp.wav"; \
-	else \
-		mv "$@.tmp.wav" "$@"; \
-	fi
+	@SPEAKER=$<; SPEAKER=$${SPEAKER##*/}; SPEAKER=$${SPEAKER#*_}; SPEAKER=$${SPEAKER%.txt}; \
+	printf "$(YELLOW)Synthesizing fragment for $(BLUE)%-15s$(RESET) via $(GREEN)$(ENGINE)$(RESET) -> $(BLUE)$@$(RESET)\r" "$$SPEAKER"; \
+	./$(TOOLS_DIR)/synthesize.sh -i "$<" -o "$@" -m "$(VOICE_MAP)" -e "$(ENGINE)" -d "$(VOICES_DIR)" -v "$(DEFAULT_VOICE_MODEL)"
 
 # Sub-cíl, který vyžaduje hotové WAV soubory
 synthesize: $(WAV_FRAGMENTS)

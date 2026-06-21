@@ -2,6 +2,21 @@
 
 Nástroj na převod knihy do audio formátu. Využívá knihovnu [piper-tts](https://github.com/OHF-Voice/piper1-gpl) pro převod textu na řeč.
 
+- [book to audio](#book-to-audio)
+  - [Spuštění](#spuštění)
+    - [Instalace závislostí](#instalace-závislostí)
+    - [Paralelní zpracování](#paralelní-zpracování)
+    - [Přehrání audia](#přehrání-audia)
+    - [Volba TTS enginu](#volba-tts-enginu)
+  - [Cíl aplikace](#cíl-aplikace)
+  - [Návrh Pipeline](#návrh-pipeline)
+    - [XML](#xml)
+    - [Hlasy](#hlasy)
+    - [Adresářová struktura](#adresářová-struktura)
+  - [Další halsy](#další-halsy)
+    - [Piper](#piper)
+    - [Edge](#edge)
+
 ## Spuštění
 
 Knihy ve formátu .epub vložte do složky `books/`. 
@@ -11,6 +26,25 @@ make
 ```
 
 Automaticky se nainstalují závislosti a spustí se nástoroj převod knihy do audio formátu.
+
+### Instalace závislostí
+
+Pro instalaci závislostí je možné použít příkaz:
+```bash
+make install
+```
+
+> [!tip]
+Pokud nemátě povolené `--break-system-packages` v pip3, je možné použít příkaz:
+
+```bash
+pip3 install -r pip-dependencies.txt --break-system-packages
+```
+
+Pro nainstalování system-wide pip balíčků.
+
+> [!note]
+Pokud se pojíte že rozbijete systém, je možné použít virtuální prostředí.
 
 ### Paralelní zpracování
 
@@ -25,6 +59,17 @@ Přehrání výsledného souboru:
 ```bash
 aplay $(GENERATE_AUDIO_DIR)/<book_name>.wav
 ```
+
+### Volba TTS enginu
+Pro volbu TTS enginu je možné použít parametr `ENGINE`, například:
+
+```bash
+make read BOOK=Hamlet ENGINE=piper
+```
+
+Na výber jsou momentálně dva enginy:
+- `piper` - open source engine, který je rychlý a má dobré výsledky, ale je omezený na několik hlasů.
+- `edge` - engine od Microsoftu, který má více hlasů a podporuje více jazyků, ale je pomalejší a vyžaduje připojení k internetu.
 
 ## Cíl aplikace
 
@@ -79,6 +124,15 @@ DUCH=cs_CZ-honza-medium|-500
 
 Značky za `|` určují modulaci hlasu, kde 0 je výchozí hodnota, záporné hodnoty znamenají nižší hlas a kladné hodnoty vyšší hlas, jako parametr se předávají `sox`.
 
+Pokud použijete `edge` engine, je možné použít následující hlasové modely:
+```conf
+HROBNÍK=cs-CZ-AntoninNeural|-15Hz|-10%
+KNĚZ=cs-CZ-AntoninNeural|-12Hz|-10%
+KRÁL=cs-CZ-AntoninNeural|-18Hz|-10%
+KRÁLOVNA=cs-CZ-VlastaNeural|-5Hz|-5%
+LAERT=cs-CZ-AntoninNeural|-5Hz|+5%
+```
+
 ### Adresářová struktura
 
 ```
@@ -99,6 +153,16 @@ generated/
 ```
 
 
-## Další jazyky
+## Další halsy
 
+### Piper
 - [hugingface: Honza](https://huggingface.co/Thomcles/Piper-TTS-Czech)
+
+### Edge
+
+```bash
+cs-CZ-AntoninNeural                Male      General                Friendly, Positive
+cs-CZ-VlastaNeural                 Female    General                Friendly, Positive
+sk-SK-LukasNeural                  Male      General                Friendly, Positive
+sk-SK-ViktoriaNeural               Female    General                Friendly, Positive
+```

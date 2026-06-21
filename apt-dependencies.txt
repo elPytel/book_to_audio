@@ -1,7 +1,9 @@
 python3-pip
 pylint
+jq
+wget
+ffmpeg
 sox 
 libsox-fmt-all
 libxml2-utils
 pandoc
-ffmpeg
