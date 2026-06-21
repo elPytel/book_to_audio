@@ -1,5 +1,7 @@
 python3-pip
 pylint
+sox 
+libsox-fmt-all
 libxml2-utils
 pandoc
 ffmpeg

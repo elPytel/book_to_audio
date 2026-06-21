@@ -112,6 +112,21 @@ list-speakers: $(INPUT_XML)
 		uniq | \
 		sed 's/^/  - /'
 
+VOICE_MAP := $(BOOKS_DIR)/$(BOOK)_voices.conf
+
+generate-voices-map: $(INPUT_XML)
+	@printf "$(YELLOW)Generating voices map from $(BLUE)$(INPUT_XML)$(RESET)...\n"
+	@if [ ! -f $(VOICE_MAP) ]; then \
+		xmllint --xpath "//utterance/@speaker" $< 2>/dev/null | \
+		tr ' ' '\n' | \
+		sed 's/speaker="//g; s/"//g' | \
+		sort | uniq | \
+		awk '{print $$1"=$(VOICE)|0"}' > $(VOICE_MAP); \
+		printf "$(GREEN)Map successfully created at $(BLUE)$(VOICE_MAP)$(RESET)\n"; \
+	else \
+		printf "$(YELLOW)Map $(BLUE)$(VOICE_MAP)$(YELLOW) already exists. Skipping to prevent overwrite.$(RESET)\n"; \
+	fi
+
 # Target to print acts and scenes count
 stats: $(INPUT_XML)
 	@printf "$(YELLOW)Struktura dila $(BLUE)$(BOOK)$(YELLOW):$(RESET)\n"
@@ -132,15 +147,26 @@ stats: $(INPUT_XML)
 	fi
 
 # Cíl pro vytvoření fragmentů textu
-split: validate-xml
+split: validate-xml stats list-speakers generate-voices-map
 	@printf "$(YELLOW)Splitting XML into fragments in $(BLUE)$(FRAGMENTS_DIR)$(RESET)...\n"
 	@./$(TOOLS_DIR)/split_xml.sh "$(INPUT_XML)" "$(FRAGMENTS_DIR)"
 
-# Vzorové pravidlo pro převod jednoho TXT na WAV
-# Běží zcela bez smyčky. Make ho aplikuje na každý soubor automaticky.
+# Vzorové pravidlo pro převod jednoho TXT na WAV s podporou modulace hlasu
 %.wav: %.txt
-	@printf "$(YELLOW)Synthesizing fragment $(BLUE)$<$(YELLOW) to $(BLUE)$@$(RESET)...\n"
-	@cat "$<" | python3 -m piper -m $(VOICES) --data-dir $(VOICES_DIR) -f "$@" 2>/dev/null
+	@SPEAKER=$$(basename "$<" .txt | cut -d'_' -f2-); \
+	CONFIG=$$(grep "^$$SPEAKER=" $(VOICE_MAP) 2>/dev/null | cut -d'=' -f2); \
+	VOICE_MODEL=$$(echo "$$CONFIG" | cut -d'|' -f1); \
+	PITCH_SHIFT=$$(echo "$$CONFIG" | cut -d'|' -f2); \
+	if [ -z "$$VOICE_MODEL" ]; then VOICE_MODEL="$(VOICE)"; fi; \
+	if [ -z "$$PITCH_SHIFT" ]; then PITCH_SHIFT="0"; fi; \
+	printf "$(YELLOW)Synthesizing $(BLUE)$$SPEAKER$(YELLOW) using $(GREEN)$$VOICE_MODEL$(YELLOW) (Pitch: $$PITCH_SHIFT) -> $(BLUE)$@$(RESET)\n"; \
+	cat "$<" | python3 -m piper -m "$$VOICE_MODEL" --data-dir $(VOICES_DIR) -f "$@.tmp.wav" 2>/dev/null; \
+	if [ "$$PITCH_SHIFT" != "0" ]; then \
+		sox "$@.tmp.wav" "$@" pitch "$$PITCH_SHIFT"; \
+		rm -f "$@.tmp.wav"; \
+	else \
+		mv "$@.tmp.wav" "$@"; \
+	fi
 
 # Sub-cíl, který vyžaduje hotové WAV soubory
 synthesize: $(WAV_FRAGMENTS)
